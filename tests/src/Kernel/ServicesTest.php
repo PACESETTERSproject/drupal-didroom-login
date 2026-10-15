@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace Drupal\Tests\didroom_login\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\didroom_login\Login\AccountResolver;
+use Drupal\didroom_login\Login\ClaimValidator;
 use Drupal\didroom_login\Verifier\VerifierClient;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests that the verifier client service is wired up.
+ * Tests that the module's services are wired up.
  *
  * @group didroom_login
  */
 #[Group('didroom_login')]
-final class VerifierClientServiceTest extends KernelTestBase {
+final class ServicesTest extends KernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -34,6 +36,16 @@ final class VerifierClientServiceTest extends KernelTestBase {
     $query = $client->buildDcqlQuery();
     $this->assertSame('email_credential', $query['credentials'][0]['id']);
     $this->assertSame(['path' => ['iss'], 'values' => ['https://issuer.example.org']], end($query['credentials'][0]['claims']));
+
+    // The login services resolve by id and by class too.
+    $services = [
+      ClaimValidator::class => 'didroom_login.claim_validator',
+      AccountResolver::class => 'didroom_login.account_resolver',
+    ];
+    foreach ($services as $class => $id) {
+      $this->assertInstanceOf($class, $this->container->get($id));
+      $this->assertSame($this->container->get($id), $this->container->get($class));
+    }
   }
 
 }
