@@ -7,3 +7,13 @@ services:
     class: Drupal\didroom_login\Verifier\VerifierClient
     arguments: ['@http_client', '@config.factory', '@settings', '@logger.channel.didroom_login']
   Drupal\didroom_login\Verifier\VerifierClient: '@didroom_login.verifier_client'
+
+  didroom_login.claim_validator:
+    class: Drupal\didroom_login\Login\ClaimValidator
+    arguments: ['@config.factory', '@email.validator']
+  Drupal\didroom_login\Login\ClaimValidator: '@didroom_login.claim_validator'
+
+  didroom_login.account_resolver:
+    class: Drupal\didroom_login\Login\AccountResolver
+    arguments: ['@externalauth.externalauth', '@entity_type.manager', '@config.factory', '@logger.channel.didroom_login']
+  Drupal\didroom_login\Login\AccountResolver: '@didroom_login.account_resolver'

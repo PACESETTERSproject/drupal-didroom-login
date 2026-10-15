@@ -138,7 +138,7 @@ class VerifierClient {
     }
 
     $credential = $query['credentials'][0];
-    $issuer_claim = ($credential['format'] ?? NULL) === 'ldp_vc' ? 'issuer' : 'iss';
+    $issuer_claim = self::issuerClaim($credential['format'] ?? NULL);
     $claims = array_filter(
       is_array($credential['claims'] ?? NULL) ? $credential['claims'] : [],
       fn($claim) => !is_array($claim) || ($claim['path'] ?? NULL) !== [$issuer_claim],
@@ -149,6 +149,16 @@ class VerifierClient {
     unset($credential['claim_sets']);
     $query['credentials'][0] = $credential;
     return $query;
+  }
+
+  /**
+   * Returns the name of the claim holding the issuer for a credential format.
+   *
+   * @param mixed $format
+   *   The DCQL credential format, e.g. "dc+sd-jwt" or "ldp_vc".
+   */
+  public static function issuerClaim(mixed $format): string {
+    return $format === 'ldp_vc' ? 'issuer' : 'iss';
   }
 
   /**
