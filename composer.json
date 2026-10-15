@@ -1,0 +1,16 @@
+{
+    "name": "drupal/didroom_login",
+    "description": "Log in to Drupal with a DIDroom / Pacesetters wallet using OpenID4VP verifiable credentials.",
+    "type": "drupal-module",
+    "license": "GPL-3.0-or-later",
+    "keywords": ["Drupal", "DIDroom", "OpenID4VP", "verifiable credentials", "SSI", "login"],
+    "homepage": "https://github.com/PACESETTERSproject/drupal-didroom-login",
+    "require": {
+        "php": ">=8.1",
+        "drupal/core": "^10.3 || ^11",
+        "drupal/externalauth": "^2.0"
+    },
+    "require-dev": {
+        "drush/drush": "^13"
+    }
+}

@@ -1,0 +1,7 @@
+name: DIDroom Login
+type: module
+description: 'Log in with a DIDroom / Pacesetters wallet using OpenID4VP verifiable credentials.'
+package: Authentication
+core_version_requirement: ^10.3 || ^11
+dependencies:
+  - externalauth:externalauth
