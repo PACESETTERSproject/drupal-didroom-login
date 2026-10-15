@@ -1,0 +1,9 @@
+services:
+  logger.channel.didroom_login:
+    parent: logger.channel_base
+    arguments: ['didroom_login']
+
+  didroom_login.verifier_client:
+    class: Drupal\didroom_login\Verifier\VerifierClient
+    arguments: ['@http_client', '@config.factory', '@settings', '@logger.channel.didroom_login']
+  Drupal\didroom_login\Verifier\VerifierClient: '@didroom_login.verifier_client'
