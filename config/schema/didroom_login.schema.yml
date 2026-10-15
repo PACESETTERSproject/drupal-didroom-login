@@ -1,0 +1,41 @@
+didroom_login.settings:
+  type: config_object
+  label: 'DIDroom Login settings'
+  mapping:
+    verifier_url:
+      type: string
+      label: 'Base URL of the DIDroom verifier microservice endpoints, ending in /verifier/'
+    dcql_query:
+      type: string
+      label: 'DCQL query (JSON) sent to the verifier; the first credential is the one used for login'
+    email_claim_path:
+      type: string
+      label: 'Dot-separated path of the email claim in the verified credential'
+    trusted_issuers:
+      type: sequence
+      label: 'Trusted credential issuers (iss / issuer values)'
+      sequence:
+        type: string
+        label: 'Issuer'
+    auto_create:
+      type: boolean
+      label: 'Create a Drupal account when no user matches the verified email'
+    default_roles:
+      type: sequence
+      label: 'Roles granted to accounts created by wallet login'
+      sequence:
+        type: string
+        label: 'Role'
+    excluded_roles:
+      type: sequence
+      label: 'Roles that may not log in with a wallet'
+      sequence:
+        type: string
+        label: 'Role'
+    session_ttl:
+      type: integer
+      label: 'Seconds a wallet login attempt stays valid'
+      constraints:
+        Range:
+          min: 60
+          max: 1800
