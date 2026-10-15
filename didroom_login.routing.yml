@@ -1,0 +1,7 @@
+didroom_login.settings:
+  path: '/admin/config/people/didroom-login'
+  defaults:
+    _form: '\Drupal\didroom_login\Form\SettingsForm'
+    _title: 'DIDroom Login'
+  requirements:
+    _permission: 'administer didroom login'

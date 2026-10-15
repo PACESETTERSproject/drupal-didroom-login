@@ -1,0 +1,23 @@
+verifier_url: ''
+dcql_query: |
+  {
+    "credentials": [
+      {
+        "id": "email_credential",
+        "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": ["email"]
+        },
+        "claims": [
+          {"path": ["email"]}
+        ]
+      }
+    ]
+  }
+email_claim_path: email
+trusted_issuers: []
+auto_create: true
+default_roles: []
+excluded_roles:
+  - administrator
+session_ttl: 300

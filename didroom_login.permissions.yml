@@ -1,0 +1,4 @@
+administer didroom login:
+  title: 'Administer DIDroom Login'
+  description: 'Configure the verifier, accepted credentials and account rules for wallet login.'
+  restrict access: true

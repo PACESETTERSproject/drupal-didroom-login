@@ -1,0 +1,5 @@
+didroom_login.settings:
+  title: 'DIDroom Login'
+  description: 'Configure login with a DIDroom / Pacesetters wallet.'
+  route_name: didroom_login.settings
+  parent: user.admin_index
