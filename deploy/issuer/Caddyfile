@@ -1,0 +1,59 @@
+{
+	admin off
+	auto_https off
+	servers {
+		# Behind the tunnel (or another proxy on a private network), take
+		# the client address from its headers, for the email rate limits.
+		trusted_proxies static private_ranges
+		client_ip_headers Cf-Connecting-Ip X-Forwarded-For
+	}
+}
+
+# Only the endpoints of the OpenID4VCI flow are reachable. Everything else
+# that ncr serves (API docs, the endpoint of every contract, such as
+# ru_to_ac, which hands out authorization codes for any claims) is 404.
+# OPTIONS passes too: a wallet running in a browser sends CORS preflights,
+# e.g. before the token request, which carries a DPoP header.
+:80 {
+	@authz {
+		method GET POST OPTIONS
+		path /authz_server/.well-known/oauth-authorization-server /authz_server/authorize /authz_server/authorize_backend /authz_server/par /authz_server/token /authz_server/introspection
+	}
+	@issuer {
+		method GET POST OPTIONS
+		path /credential_issuer/.well-known/openid-credential-issuer /credential_issuer/credential /credential_issuer/nonce /credential_issuer/qrcode /credential_issuer/deeplink
+	}
+	# /redeem stays internal: only the authorization server calls it.
+	@email_code {
+		method POST
+		path /email-code/send /email-code/check
+	}
+	@page path / /index.html /logo.svg
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+	header @page Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"
+	header /authz_server/authorize Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"
+
+	handle @authz {
+		reverse_proxy authz_server:3000
+	}
+	handle @issuer {
+		reverse_proxy credential_issuer:3000
+	}
+	handle @email_code {
+		uri strip_prefix /email-code
+		reverse_proxy email-code:8000 {
+			header_up X-Client-IP {client_ip}
+		}
+	}
+	handle @page {
+		root * /srv
+		file_server
+	}
+	handle {
+		respond 404
+	}
+}

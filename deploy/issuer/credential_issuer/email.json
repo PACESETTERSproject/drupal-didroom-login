@@ -1,0 +1,45 @@
+{
+    "format": "dc+sd-jwt",
+    "vct": "email",
+    "cryptographic_binding_methods_supported": [
+        "jwk",
+        "did:dyne:sandbox.signroom"
+    ],
+    "credential_signing_alg_values_supported": [
+        "ES256"
+    ],
+    "proof_types_supported": {
+        "jwt": {
+            "proof_signing_alg_values_supported": [
+                "ES256"
+            ]
+        }
+    },
+    "display": [
+        {
+            "name": "Email address",
+            "locale": "en-US",
+            "description": "An email address, confirmed with a code sent to it.",
+            "background_color": "#1d4e89",
+            "text_color": "#FFFFFF",
+            "logo": {
+                "uri": "{{ url }}/logo.svg",
+                "alt_text": "An envelope"
+            }
+        }
+    ],
+    "claims": [
+        {
+            "path": [
+                "email"
+            ],
+            "mandatory": true,
+            "display": [
+                {
+                    "name": "Email",
+                    "locale": "en-US"
+                }
+            ]
+        }
+    ]
+}

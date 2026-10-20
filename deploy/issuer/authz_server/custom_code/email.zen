@@ -1,0 +1,15 @@
+# Runs when the authorize page is submitted. The page sends the ticket that
+# the email code service gave for a correct code; the service confirms the
+# ticket (once) and returns the address, which becomes the email claim.
+Rule unknown ignore
+Scenario 'http'
+
+Prepare 'redeemed': connect to 'redeem_url' and do post where object is 'redeem'
+
+Given I have a 'string dictionary' named 'redeemed'
+Given I have a 'string' in path 'redeemed.result.email'
+
+When I create the 'string dictionary' named 'data'
+When I move 'email' in 'data'
+
+Then print the 'data'
