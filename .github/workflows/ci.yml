@@ -71,3 +71,23 @@ jobs:
 
       - name: Test the proxy rules
         run: deploy/verifier/test-proxy.sh
+
+  issuer:
+    name: Issuer proxy, email codes and config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the scripts and compose file
+        run: |
+          bash -n deploy/issuer/setup.sh deploy/issuer/configure.sh deploy/issuer/test-proxy.sh scripts/dev-issuer.sh
+          python3 -m py_compile deploy/issuer/test-issuance.py
+          ISSUER_NAME=ci MAIL_FROM=ci@example.org docker compose -f deploy/issuer/compose.yaml --profile tunnel --profile dev config -q
+
+      - name: Test the email code service
+        working-directory: deploy/issuer/email-code
+        run: docker run --rm -v "$PWD:/src:ro" -w /src -e PYTHONDONTWRITEBYTECODE=1 python:3.13.16-alpine3.24 python -m unittest -v
+
+      - name: Test the proxy rules
+        run: deploy/issuer/test-proxy.sh

@@ -1,0 +1,17 @@
+{
+    "title": "Email confirmation",
+    "description": "Filled in by the authorize page once the emailed code is confirmed.",
+    "type": "object",
+    "properties": {
+        "redeem": {
+            "type": "object",
+            "properties": {
+                "ticket": {
+                    "type": "string"
+                }
+            },
+            "required": ["ticket"]
+        }
+    },
+    "required": ["redeem"]
+}

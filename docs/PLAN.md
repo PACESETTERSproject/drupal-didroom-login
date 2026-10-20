@@ -50,9 +50,14 @@ attacker knows. Mitigations in `AccountResolver`:
   and tell the user by email, so any password set by someone else stops working.
 
 ### Verified email issuer
-Login is only as safe as the issuer's email check. If no DIDroom issuer already issues a verified-email
-credential for Pacesetters, one must be built and run (e.g. an issuer that confirms the address with a
-one-time code before issuing). Separate project; **blocks production use**.
+Login is only as safe as the issuer's email check. The wallet cannot share its own (PocketBase) account email:
+OpenID4VP only carries issuer-signed credentials, and a self-asserted address would let anyone log in as anyone.
+✅ Built (step 7b): `deploy/issuer/`, a DIDroom authorization server + credential issuer that issue an `email`
+SD-JWT only after a one-time code emailed to the address is entered back (small `email-code` service: 6 digits,
+10 min, 5 tries, send rate limits, single-use 5-min ticket redeemed internally by the authz custom code).
+Production still needs a host, a stable URL (it is the credential `iss`), a real mail server (SPF/DKIM), and
+non-sandbox DIDs; or Dyne/Pacesetters may issue the credential from the wallet backend instead, if it verifies
+addresses. **Blocks production use** until one of the two runs.
 
 ### Verifier identity
 The verifier signs requests with its DID key (`client_id = decentralized_identifier:<did>`, ES256 request objects).
@@ -142,7 +147,7 @@ src/Verifier/{VerifierClient,VerificationRequest,VerificationResult,Verification
 src/Login/{ClaimValidator,AccountResolver,VerifiedIdentity,LoginException,LoginFailure}.php
 templates/didroom-login.html.twig  js/didroom-login.js  css/didroom-login.css
 tests/src/{Unit,Kernel,Functional,FunctionalJavascript,Traits}/…  tests/modules/didroom_login_test/ (fake VerifierClient)
-deploy/verifier/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  README.md  LICENSE
+deploy/verifier/  deploy/issuer/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  README.md  LICENSE
 ```
 
 ## Implementation steps
@@ -166,17 +171,25 @@ deploy/verifier/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  READ
    Checked: Drupal opens real sessions; the signed request is fetched once over the tunnel; a bogus presentation
    is recorded as failed and shown once; the DID survives restarts. Notes: new session routes take ~1–3 s to load;
    a new tunnel name takes 1–2 min to resolve.
+7b. ✅ **Email issuer** — `deploy/issuer` (authz server, credential issuer, `email-code`, Caddy allowlist, Mailpit,
+   tunnel); own authorize page (email → code → ticket); `scripts/dev-issuer.sh up` configures the issuer URL and
+   makes it the DDEV site's trusted issuer. `deploy/issuer/test-issuance.py --login` runs the wallet's own
+   mobile_zencode contracts in ncr as a simulated wallet: issuance with a code from Mailpit (wrong code, bogus and
+   reused tickets refused), then presentation to the dev verifier → Drupal logs in (account created). Findings:
+   ncr exposes `ru_to_ac`, which issues codes for any claims (must stay behind the proxy); the wallet refuses offers
+   naming the authorization server when only one is listed; ncr doesn't decode `+` in form posts.
 8. **End-to-end** with a real Pacesetters wallet holding an email credential from the chosen issuer —
    both **cross-device** (QR on desktop) and **same-device** (phone browser + wallet on the same phone).
-9. **Hardening + docs** — Caddy rules for production (TLS, rate limits), pruning job, monitoring, image pinning, verifier DID key backup/rotation,
+9. **Hardening + docs** — Caddy rules for production (TLS, rate limits) for verifier and issuer, pruning job
+   (also the issuer's `credential_issuer/nonces/`), a "get an email credential" link on the login page, monitoring, image pinning, verifier DID key backup/rotation,
    README (install via composer vcs repo, settings.php token, verifier deploy, QR-phishing residual risk,
    privacy text, AGPL note), phpcs + phpstan clean; upstream issues (nonce/aud, same-device `response_code`, `jwks_uri`);
    first tagged release.
 
 ## Open items
 Settle with the Pacesetters team **before step 7**:
-- Which DIDroom issuer issues a **verified-email** credential for Pacesetters, its `iss` URL and credential
-  `type`/`vct` — or the decision to build one (blocks production).
+- Who runs the **email issuer** in production (`deploy/issuer`, or Dyne/Pacesetters from the wallet backend),
+  its public URL (the credential `iss`) and mail server.
 - Where the verifier runs (pacesetters.eu is FreeBSD → separate Linux host or VM), who operates and monitors it,
   and its public hostname (e.g. `verifier.pacesetters.eu`).
 - The verifier's production DID: who creates it, where the key is backed up.
@@ -195,4 +208,6 @@ Before any drupal.org release:
   expired session → error shown.
 - Confirm `generate_authorization_request` without the bearer token is refused by Caddy (404), and
   `/verifier/transaction/*` is not reachable from outside (`deploy/verifier/test-proxy.sh`, also in CI).
+- Issuer: only the OpenID4VCI endpoints and `/email-code/{send,check}` are reachable, never `ru_to_ac` or
+  `/email-code/redeem` (`deploy/issuer/test-proxy.sh`, in CI); `deploy/issuer/test-issuance.py --login` passes.
 - Uninstall the module on a test site → no `didroom_login` rows left in `authmap`.

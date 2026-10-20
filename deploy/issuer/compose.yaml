@@ -1,0 +1,86 @@
+# A DIDroom issuer of email credentials, behind a proxy that only lets the
+# issuance flow through. See README.md.
+name: didroom-issuer
+
+x-ncr: &ncr
+  # Built from DIDroom_microservices commit c22341d (see setup.sh), like the
+  # verifier.
+  image: ghcr.io/forkbombeu/didroom_microservices@sha256:1c68569c033a41722a2289cbde0804396c9bf74d29ef3bdabf65a9b24d4acb73
+  restart: unless-stopped
+
+services:
+  authz_server:
+    <<: *ncr
+    entrypoint:
+      - sh
+      - -c
+      - ./scripts/authorize.sh && exec ./ncr -p 3000 -z authz_server --public-directory public/authz_server --basepath /authz_server
+    environment:
+      # Only name the saved keyrings, so that the DIDs survive restarts.
+      MS_URL: http://didroom-issuer
+      MS_NAME: authz_server
+    volumes:
+      - ./run/authz_server:/app/authz_server
+      - ./run/public/authz_server:/app/public/authz_server
+      - ./run/keys:/root/.config/didroom
+
+  credential_issuer:
+    <<: *ncr
+    entrypoint:
+      - sh
+      - -c
+      - ./scripts/credential.sh && exec ./ncr -p 3000 -z credential_issuer --public-directory public/credential_issuer --basepath /credential_issuer
+    environment:
+      MS_URL: http://didroom-issuer
+      MS_NAME: credential_issuer
+    volumes:
+      - ./run/credential_issuer:/app/credential_issuer
+      - ./run/public/credential_issuer:/app/public/credential_issuer
+      - ./run/keys:/root/.config/didroom
+
+  email-code:
+    image: python:3.13.16-alpine3.24
+    command: python -u /app/email_code.py
+    user: nobody
+    read_only: true
+    environment:
+      ISSUER_NAME: ${ISSUER_NAME:?Set ISSUER_NAME in .env}
+      MAIL_FROM: ${MAIL_FROM:?Set MAIL_FROM in .env}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURITY: ${SMTP_SECURITY:-none}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    volumes:
+      - ./email-code/email_code.py:/app/email_code.py:ro
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2.10.2-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./www:/srv:ro
+    ports:
+      - 127.0.0.1:${ISSUER_PORT:-8091}:80
+    depends_on:
+      - authz_server
+      - credential_issuer
+      - email-code
+    restart: unless-stopped
+
+  # Catches the emails in development: web UI on http://127.0.0.1:8027.
+  mailpit:
+    profiles: [dev]
+    image: axllent/mailpit:v1.28.0
+    ports:
+      - 127.0.0.1:${MAILPIT_PORT:-8027}:8025
+    restart: unless-stopped
+
+  # A public HTTPS URL for phones, with a random trycloudflare.com name.
+  tunnel:
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:2026.1.1
+    command: tunnel --no-autoupdate --url http://proxy:80
+    depends_on:
+      - proxy
+    restart: unless-stopped

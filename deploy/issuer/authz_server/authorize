@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="../logo.svg">
+  <title>Confirm your email address</title>
+  <!-- Replaces DIDroom's generic authorize page (see ../README.md): the
+       email code needs two steps, and no scripts are loaded from elsewhere. -->
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1a2230;
+      --muted: #5a6577;
+      --accent: #1d4e89;
+      --on-accent: #ffffff;
+      --border: #c9d1dc;
+      --error: #b3261e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11161e;
+        --card: #1a212c;
+        --text: #e6ebf2;
+        --muted: #a3adbd;
+        --accent: #8ab4f8;
+        --on-accent: #0b1a2e;
+        --border: #3a4556;
+        --error: #f2b8b5;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main {
+      max-width: 28rem;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
+    p { margin: 0 0 1rem; }
+    .muted { color: var(--muted); }
+    label { display: block; font-weight: 600; margin-bottom: .35rem; }
+    input {
+      width: 100%;
+      font: inherit;
+      padding: .7rem .8rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    input#code { font-size: 1.5rem; letter-spacing: .3em; text-align: center; }
+    input:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button.primary {
+      width: 100%;
+      margin-top: 1rem;
+      font: inherit;
+      font-weight: 600;
+      padding: .75rem;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--on-accent);
+      cursor: pointer;
+    }
+    button.primary:disabled { opacity: .6; cursor: progress; }
+    button.link {
+      font: inherit;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--accent);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    button.link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+    .actions { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 1rem 0 0; }
+    #message { margin: 1rem 0 0; }
+    #message:empty { display: none; }
+    #message.error { color: var(--error); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>Confirm your email address</h1>
+      <p class="muted">Your wallet asked for an email credential. We send a code to your address; enter it here, and the wallet receives a credential that proves the address is yours.</p>
+
+      <form id="email-form" novalidate>
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required>
+        <button class="primary" type="submit">Send code</button>
+      </form>
+
+      <form id="code-form" novalidate hidden>
+        <p id="sent-to"></p>
+        <label for="code">Code</label>
+        <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+        <button class="primary" type="submit">Confirm</button>
+        <p class="actions">
+          <button class="link" type="button" id="resend">Send a new code</button>
+          <button class="link" type="button" id="change">Use another address</button>
+        </p>
+      </form>
+
+      <p id="message" role="status" aria-live="polite"></p>
+    </div>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+
+      // The wallet opens this page with the client_id and request_uri of its
+      // pushed authorization request. They are passed on as they are, like
+      // DIDroom's own page does.
+      const params = {};
+      for (const pair of location.search.slice(1).split('&')) {
+        const i = pair.indexOf('=');
+        if (i > 0) params[pair.slice(0, i)] = pair.slice(i + 1);
+      }
+      const backend = new URL('authorize_backend', location.href);
+      const api = new URL('../email-code/', location.href);
+
+      const $ = (id) => document.getElementById(id);
+      const emailForm = $('email-form');
+      const codeForm = $('code-form');
+      const message = $('message');
+      let email = '';
+      let resendTimer = 0;
+
+      const say = (text, error = false) => {
+        message.textContent = text;
+        message.className = error ? 'error' : '';
+      };
+      const later = (seconds) => seconds >= 120 ? `${Math.ceil(seconds / 60)} minutes` : `${seconds} seconds`;
+      const errors = {
+        invalid_email: () => 'Enter a valid email address.',
+        rate_limited: (d) => `Too many codes were asked for. Try again in ${later(d.retry_after || 60)}.`,
+        mail_failed: () => 'The code could not be sent. Try again in a few minutes.',
+        busy: () => 'The service is busy. Try again in a few minutes.',
+        invalid_code: (d) => `That code is not right. ${d.attempts_left} ${d.attempts_left === 1 ? 'attempt' : 'attempts'} left.`,
+        no_code: () => 'This code has expired, or was tried too many times. Send a new code.',
+      };
+      const explain = (data) => (errors[data.error] || (() => 'Something went wrong. Try again.'))(data);
+
+      async function call(path, body) {
+        try {
+          const response = await fetch(new URL(path, api), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          let data = {};
+          try { data = await response.json(); } catch (e) { /* not JSON */ }
+          return { ok: response.ok, data };
+        } catch (e) {
+          return { ok: false, data: { error: 'network' }, network: true };
+        }
+      }
+
+      async function busy(form, work) {
+        const button = form.querySelector('button[type=submit]');
+        button.disabled = true;
+        try { await work(); } finally { button.disabled = false; }
+      }
+
+      function countdown(seconds) {
+        const resend = $('resend');
+        clearInterval(resendTimer);
+        resend.disabled = true;
+        const tick = () => {
+          resend.textContent = seconds > 0 ? `Send a new code (${seconds} s)` : 'Send a new code';
+          if (seconds-- <= 0) {
+            clearInterval(resendTimer);
+            resend.disabled = false;
+          }
+        };
+        tick();
+        resendTimer = setInterval(tick, 1000);
+      }
+
+      async function sendCode() {
+        const result = await call('send', { email });
+        if (result.network) return say('Could not reach the issuer. Check your connection and try again.', true);
+        if (!result.ok) return say(explain(result.data), true);
+        emailForm.hidden = true;
+        codeForm.hidden = false;
+        $('sent-to').textContent = `We sent a code to ${email}. It is valid for ${Math.round(result.data.expires_in / 60)} minutes.`;
+        say('');
+        countdown(result.data.resend_in);
+        $('code').value = '';
+        $('code').focus();
+      }
+
+      emailForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        email = $('email').value.trim();
+        if (!$('email').checkValidity() || !email) return say(errors.invalid_email(), true);
+        busy(emailForm, sendCode);
+      });
+
+      $('resend').addEventListener('click', () => busy(codeForm, sendCode));
+
+      $('change').addEventListener('click', () => {
+        codeForm.hidden = true;
+        emailForm.hidden = false;
+        clearInterval(resendTimer);
+        say('');
+        $('email').focus();
+      });
+
+      codeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const code = $('code').value.replace(/\s/g, '');
+        if (!/^[0-9]{6}$/.test(code)) return say('The code has 6 digits.', true);
+        busy(codeForm, async () => {
+          const result = await call('check', { email, code });
+          if (result.network) return say('Could not reach the issuer. Check your connection and try again.', true);
+          if (!result.ok) {
+            if (result.data.error === 'no_code') $('code').value = '';
+            return say(explain(result.data), true);
+          }
+          say('Address confirmed. Returning to your wallet…');
+          // The authorization server redeems the ticket, then sends the
+          // browser back to the wallet with an authorization code.
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = backend;
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'form_input_and_params';
+          input.value = JSON.stringify({ params, data: { redeem: { ticket: result.data.ticket } }, custom_code: 'email' });
+          form.appendChild(input);
+          document.body.appendChild(form);
+          form.submit();
+        });
+      });
+
+      if (!params.request_uri || !params.client_id) {
+        emailForm.hidden = true;
+        say('Open this page from your wallet, when it asks for an email credential.', true);
+      } else {
+        $('email').focus();
+      }
+    })();
+  </script>
+</body>
+</html>
