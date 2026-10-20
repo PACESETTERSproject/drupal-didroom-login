@@ -8,3 +8,5 @@
 /.gitattributes
 /phpunit.xml
 /recipes/
+/.prettierignore
+/.prettierrc.json

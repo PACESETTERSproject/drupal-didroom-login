@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * @file
+ * Log in to Drupal with a DIDroom / Pacesetters wallet.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_theme().
+ */
+function didroom_login_theme(): array {
+  return [
+    'didroom_login' => [
+      'variables' => [
+        'qr_code' => NULL,
+        'intent_url' => NULL,
+        'expires_in' => NULL,
+        'password_url' => NULL,
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for user_login_form.
+ *
+ * Adds the wallet login link, once the module is configured.
+ */
+function didroom_login_form_user_login_form_alter(array &$form, FormStateInterface $form_state): void {
+  $form['#cache']['tags'][] = 'config:didroom_login.settings';
+  $form['#cache']['contexts'][] = 'url.query_args:destination';
+  if (!\Drupal::service('didroom_login.verifier_client')->isConfigured()) {
+    return;
+  }
+
+  $destination = \Drupal::request()->query->get('destination');
+  $form['didroom_login'] = [
+    '#type' => 'container',
+    '#attributes' => ['class' => ['didroom-login-link']],
+    '#weight' => 200,
+    'link' => [
+      '#type' => 'link',
+      '#title' => t('Log in with Pacesetters wallet'),
+      '#url' => Url::fromRoute('didroom_login.login', [], [
+        'query' => is_string($destination) ? ['destination' => $destination] : [],
+      ]),
+      '#attributes' => ['class' => ['button']],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_mail().
+ */
+function didroom_login_mail(string $key, array &$message, array $params): void {
+  if ($key !== 'login_notification') {
+    return;
+  }
+  /** @var \Drupal\user\UserInterface $account */
+  $account = $params['account'];
+  $options = ['langcode' => $message['langcode']];
+  $site = (string) \Drupal::config('system.site')->get('name');
+  $variables = [
+    '@site' => $site,
+    '@name' => $account->getDisplayName(),
+    '@time' => \Drupal::service('date.formatter')->format(\Drupal::time()->getRequestTime(), 'long', '', $account->getTimeZone(), $message['langcode']),
+    '@ip' => $params['ip'],
+    '@agent' => $params['user_agent'] !== '' ? $params['user_agent'] : t('unknown', [], $options),
+    ':reset' => Url::fromRoute('user.pass', [], ['absolute' => TRUE])->toString(),
+  ];
+
+  $message['subject'] = $params['created']
+    ? t('Your new account at @site', $variables, $options)
+    : t('Wallet login to @site', $variables, $options);
+
+  $body = [t('Hello @name,', $variables, $options)];
+  $body[] = $params['created']
+    ? t('An account was created for you at @site when you logged in with your wallet on @time.', $variables, $options)
+    : t('You logged in to @site with your wallet on @time.', $variables, $options);
+  $body[] = t("IP address: @ip\nBrowser: @agent", $variables, $options);
+  if ($params['linked']) {
+    $body[] = t('Your wallet is now linked to your existing account, so you can log in with it from now on.', $variables, $options);
+  }
+  if ($params['password_reset']) {
+    $body[] = t('For your security, your password was replaced and other sessions were signed out. To log in with a password again, set a new one at :reset', $variables, $options);
+  }
+  $body[] = t('If this was not you, reset your password at :reset and contact the site administrators: someone may have tricked you into scanning their QR code.', $variables, $options);
+  $message['body'] = array_map('strval', $body);
+}

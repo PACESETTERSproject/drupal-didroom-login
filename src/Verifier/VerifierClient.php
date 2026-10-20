@@ -114,6 +114,34 @@ class VerifierClient {
   }
 
   /**
+   * Whether enough is configured to start a wallet login.
+   *
+   * Cheap and silent, for deciding whether to offer wallet login at all.
+   */
+  public function isConfigured(): bool {
+    $config = $this->configFactory->get('didroom_login.settings');
+    $query = json_decode((string) $config->get('dcql_query'), TRUE);
+    return (string) $config->get('verifier_url') !== ''
+      && array_filter((array) $config->get('trusted_issuers'), 'is_string') !== []
+      && is_array($query) && is_array($query['credentials'][0] ?? NULL);
+  }
+
+  /**
+   * Whether the verifier answers result requests as expected.
+   *
+   * Asks for the result of a session that does not exist, which the verifier
+   * answers with 404. A proxy rejecting the token answers 401 or 403 instead.
+   */
+  public function isReachable(): bool {
+    try {
+      return $this->fetchResult('transaction/0')->status === VerificationStatus::Pending;
+    }
+    catch (VerifierException) {
+      return FALSE;
+    }
+  }
+
+  /**
    * Builds the DCQL query, pinning the trusted issuers into it.
    *
    * The verifier accepts any issuer unless the query restricts it, so the

@@ -140,7 +140,7 @@ deploy/verifier/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  READ
 2. ✅ **Skeleton** — info/composer/routing/services/schema/default config, settings form (PR #1).
 3. ✅ **VerifierClient** + unit tests with Guzzle `MockHandler` (PR #2).
 4. ✅ **ClaimValidator** + **AccountResolver** + unit/kernel tests (PR #3).
-5. **Controller, template, JS polling, login-form link**; page-cache kill switch / `no_cache` routes; flood control;
+5. ✅ **Controller, template, JS polling, login-form link**; page-cache kill switch / `no_cache` routes; flood control;
    user messages per `LoginFailure`; login-link hidden until configured; `visibilitychange` re-poll;
    **login notification email**; **pre-hijack rules** (`verify_mail` check, password scramble on link);
    new settings (`notify_login`, `link_unverified`, `reset_password_on_link`) and lower default `session_ttl`;

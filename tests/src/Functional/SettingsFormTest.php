@@ -58,7 +58,10 @@ final class SettingsFormTest extends BrowserTestBase {
     $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->checkboxChecked('excluded_roles[administrator]');
     $this->assertSession()->checkboxChecked('auto_create');
-    $this->assertSession()->fieldValueEquals('session_ttl', '300');
+    $this->assertSession()->fieldValueEquals('session_ttl', '120');
+    $this->assertSession()->checkboxNotChecked('link_unverified');
+    $this->assertSession()->checkboxChecked('reset_password_on_link');
+    $this->assertSession()->checkboxChecked('notify_login');
   }
 
   /**
@@ -73,7 +76,10 @@ final class SettingsFormTest extends BrowserTestBase {
       'dcql_query' => self::VALID_DCQL,
       'email_claim_path' => 'email',
       'trusted_issuers' => "https://issuer.example.org/credential_issuer\n\n  https://other.example.org  \nhttps://issuer.example.org/credential_issuer",
-      'session_ttl' => '120',
+      'session_ttl' => '90',
+      'link_unverified' => TRUE,
+      'reset_password_on_link' => FALSE,
+      'notify_login' => FALSE,
       'auto_create' => TRUE,
       'default_roles[member]' => TRUE,
       'excluded_roles[administrator]' => TRUE,
@@ -106,7 +112,10 @@ final class SettingsFormTest extends BrowserTestBase {
     $this->assertSame('https://verifier.example.org/verifier/', $config->get('verifier_url'));
     $this->assertSame(self::VALID_DCQL, $config->get('dcql_query'));
     $this->assertSame(['https://issuer.example.org/credential_issuer', 'https://other.example.org'], $config->get('trusted_issuers'));
-    $this->assertSame(120, $config->get('session_ttl'));
+    $this->assertSame(90, $config->get('session_ttl'));
+    $this->assertTrue($config->get('link_unverified'));
+    $this->assertFalse($config->get('reset_password_on_link'));
+    $this->assertFalse($config->get('notify_login'));
     $this->assertTrue($config->get('auto_create'));
     $this->assertSame(['member'], $config->get('default_roles'));
     $this->assertSame(['administrator'], $config->get('excluded_roles'));

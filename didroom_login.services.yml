@@ -5,7 +5,11 @@ services:
 
   didroom_login.verifier_client:
     class: Drupal\didroom_login\Verifier\VerifierClient
-    arguments: ['@http_client', '@config.factory', '@settings', '@logger.channel.didroom_login']
+    arguments:
+      - '@http_client'
+      - '@config.factory'
+      - '@settings'
+      - '@logger.channel.didroom_login'
   Drupal\didroom_login\Verifier\VerifierClient: '@didroom_login.verifier_client'
 
   didroom_login.claim_validator:
@@ -15,5 +19,18 @@ services:
 
   didroom_login.account_resolver:
     class: Drupal\didroom_login\Login\AccountResolver
-    arguments: ['@externalauth.externalauth', '@entity_type.manager', '@config.factory', '@logger.channel.didroom_login']
+    arguments:
+      - '@externalauth.externalauth'
+      - '@entity_type.manager'
+      - '@config.factory'
+      - '@password_generator'
+      - '@logger.channel.didroom_login'
   Drupal\didroom_login\Login\AccountResolver: '@didroom_login.account_resolver'
+
+  didroom_login.status_report:
+    class: Drupal\didroom_login\StatusReport
+    arguments:
+      - '@didroom_login.verifier_client'
+      - '@config.factory'
+      - '@settings'
+  Drupal\didroom_login\StatusReport: '@didroom_login.status_report'

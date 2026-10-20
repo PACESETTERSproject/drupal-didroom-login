@@ -1,0 +1,39 @@
+{#
+/**
+ * @file
+ * Wallet login page: a QR code for a wallet on another device, a link for a
+ * wallet on this device, and a status line updated by didroom-login.js.
+ *
+ * Available variables:
+ * - qr_code: data: URL of the QR code image.
+ * - intent_url: openid4vp:// link that opens the wallet app.
+ * - expires_in: seconds the QR code stays valid.
+ * - password_url: URL of the password login form.
+ */
+#}
+<div class="didroom-login" data-didroom-login>
+  <ol class="didroom-login__steps">
+    <li>{{ 'Open the Pacesetters wallet app on your phone.'|t }}</li>
+    <li>{{ 'Scan this QR code and share your email credential.'|t }}</li>
+    <li>{{ 'This page logs you in as soon as your wallet answers.'|t }}</li>
+  </ol>
+
+  <img class="didroom-login__qr" src="{{ qr_code }}" width="280" height="280" alt="{{ 'QR code to scan with your wallet app'|t }}">
+
+  <p class="didroom-login__same-device">
+    {% trans %}Is the wallet on this device?{% endtrans %}
+    <a class="button button--primary" href="{{ intent_url }}">{{ 'Open in wallet app'|t }}</a>
+  </p>
+
+  <p class="didroom-login__status" role="status" aria-live="polite" data-didroom-login-status>
+    {% trans %}Waiting for your wallet. The QR code is valid for {{ expires_in }} seconds.{% endtrans %}
+  </p>
+
+  <p class="didroom-login__alternatives">
+    <a href="{{ password_url }}">{{ 'Log in with your password instead'|t }}</a>
+  </p>
+
+  <p class="didroom-login__warning">
+    {% trans %}Only scan QR codes shown on this site's own address. A QR code copied to another page would log in whoever shows it.{% endtrans %}
+  </p>
+</div>

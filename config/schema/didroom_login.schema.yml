@@ -39,3 +39,12 @@ didroom_login.settings:
         Range:
           min: 60
           max: 1800
+    notify_login:
+      type: boolean
+      label: 'Email users each time they log in with a wallet'
+    link_unverified:
+      type: boolean
+      label: 'Link existing accounts by email even when the site does not verify email addresses on registration'
+    reset_password_on_link:
+      type: boolean
+      label: 'Replace the password of an existing account when it is first linked to a wallet'

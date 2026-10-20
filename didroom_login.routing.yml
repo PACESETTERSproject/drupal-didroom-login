@@ -5,3 +5,23 @@ didroom_login.settings:
     _title: 'DIDroom Login'
   requirements:
     _permission: 'administer didroom login'
+
+didroom_login.login:
+  path: '/didroom/login'
+  defaults:
+    _controller: '\Drupal\didroom_login\Controller\LoginController::start'
+    _title: 'Log in with your wallet'
+  requirements:
+    _user_is_logged_in: 'FALSE'
+  options:
+    no_cache: 'TRUE'
+
+didroom_login.status:
+  path: '/didroom/login/status'
+  defaults:
+    _controller: '\Drupal\didroom_login\Controller\LoginController::status'
+  methods: [GET]
+  requirements:
+    _user_is_logged_in: 'FALSE'
+  options:
+    no_cache: 'TRUE'

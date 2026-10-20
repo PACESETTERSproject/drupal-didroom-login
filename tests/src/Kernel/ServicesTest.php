@@ -7,6 +7,7 @@ namespace Drupal\Tests\didroom_login\Kernel;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\didroom_login\Login\AccountResolver;
 use Drupal\didroom_login\Login\ClaimValidator;
+use Drupal\didroom_login\StatusReport;
 use Drupal\didroom_login\Verifier\VerifierClient;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -41,6 +42,7 @@ final class ServicesTest extends KernelTestBase {
     $services = [
       ClaimValidator::class => 'didroom_login.claim_validator',
       AccountResolver::class => 'didroom_login.account_resolver',
+      StatusReport::class => 'didroom_login.status_report',
     ];
     foreach ($services as $class => $id) {
       $this->assertInstanceOf($class, $this->container->get($id));

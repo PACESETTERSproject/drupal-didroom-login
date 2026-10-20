@@ -1,0 +1,32 @@
+.didroom-login {
+  max-width: 32rem;
+}
+
+.didroom-login__qr {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+  margin: 1rem 0;
+  /* Keep the code scannable on dark themes. */
+  padding: 0.75rem;
+  background: #fff;
+  image-rendering: pixelated;
+}
+
+.didroom-login__status {
+  font-weight: bold;
+}
+
+.didroom-login__warning {
+  opacity: 0.8;
+  font-size: 0.875em;
+}
+
+.didroom-login--finished .didroom-login__same-device,
+.didroom-login--finished .didroom-login__steps {
+  display: none;
+}
+
+.didroom-login-link {
+  margin-top: 1rem;
+}
