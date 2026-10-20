@@ -132,8 +132,12 @@ def issue(holder: Holder, cfg: dict[str, str], email: str, mailpit: str) -> str:
     redirect_uri = "pacesetters-wallet://finalize-authentication"
 
     step("scan the credential offer")
-    with open(HERE / "run/public/credential_issuer/.qrcode.keys.json") as f:
-        offer = json.load(f)["offer"]
+    # The link served next to the QR code, as the wallet reads it.
+    _, _, link = request(f"{url}/credential_issuer/deeplink")
+    query = urllib.parse.parse_qs(urllib.parse.urlsplit(link.decode().strip()).query)
+    offer = json.loads(query["credential_offer"][0])
+    if not isinstance(offer.get("grants", {}), dict):
+        fail(f"the offer's grants are not an object: {offer}")
     params = holder.call("holder_qr_to_well-known", {"!external-qr-code-content": offer})["credential_parameters"]
 
     step("pushed authorization request")

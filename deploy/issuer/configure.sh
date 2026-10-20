@@ -49,13 +49,15 @@ update $pub/credential_issuer/.well-known/openid-credential-issuer \
   | .display = [{name: $name, locale: "en-US"}]
   | .credential_configurations_supported = {email: ($email[0] | .display[0].logo.uri |= sub("\\{\\{ url \\}\\}"; $url))}'
 
-# The offer the wallet scans: served as a QR code and as a link. It does not
-# name the authorization server: the wallet refuses offers that do while the
-# issuer lists only one (mobile_zencode, holder_qr_to_well-known).
+# The offer the wallet scans: served as a QR code and as a link. It has no
+# grants: the wallet refuses offers that name the authorization server while
+# the issuer lists only one (mobile_zencode, holder_qr_to_well-known), and
+# zencode would serve an empty grant object as an array, which the wallet's
+# offer schema refuses too. Without grants, the wallet uses the
+# authorization code flow of the issuer's authorization server.
 offer=$(jq -n --arg ci "$ci" '{
   credential_configuration_ids: ["email"],
-  credential_issuer: $ci,
-  grants: {authorization_code: {}}}')
+  credential_issuer: $ci}')
 jq -n --argjson offer "$offer" '{offer: $offer,
   qrcode_path: "public/credential_issuer/qrcode",
   command: "./scripts/qrcode.sh public/credential_issuer/qrcode"}' > $pub/credential_issuer/.qrcode.keys.json

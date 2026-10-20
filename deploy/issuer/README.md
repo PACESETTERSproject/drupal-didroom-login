@@ -154,10 +154,12 @@ stable public URL (`ISSUER_URL` is in every credential).
   form from `custom_code/*.schema.json`. An emailed code needs two steps, and
   the page loads no scripts from elsewhere. `email.schema.json` only describes
   what the page submits.
-- The credential offer does not name the authorization server: the wallet
-  refuses offers that do while the issuer lists only one
+- The credential offer has no `grants`. The wallet refuses offers that name
+  the authorization server while the issuer lists only one
   (`holder_qr_to_well-known` in mobile_zencode), though the specification
-  allows it.
+  allows it. And zencode serves an empty `authorization_code` object as an
+  array, which the wallet's offer schema refuses. `test-issuance.py` reads
+  the offer from the served link, as the wallet does.
 - ncr does not decode `+` in form posts: the page sends compact JSON, as
   `JSON.stringify` does.
 - A refused ticket sends the wallet back with an error, and the authorization
