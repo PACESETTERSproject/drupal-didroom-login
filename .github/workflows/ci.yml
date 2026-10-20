@@ -37,8 +37,7 @@ jobs:
           ddev start
           ddev poser
           ddev symlink-project
-          ddev exec drush --version
-          ddev exec composer show drupal/core | grep -m1 versions
+          ddev exec "grep 'const VERSION' web/core/lib/Drupal.php"
 
       - name: PHPUnit (unit, kernel, functional, JavaScript)
         run: ddev phpunit
