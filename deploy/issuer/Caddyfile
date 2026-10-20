@@ -12,13 +12,15 @@
 # Only the endpoints of the OpenID4VCI flow are reachable. Everything else
 # that ncr serves (API docs, the endpoint of every contract, such as
 # ru_to_ac, which hands out authorization codes for any claims) is 404.
+# OPTIONS passes too: a wallet running in a browser sends CORS preflights,
+# e.g. before the token request, which carries a DPoP header.
 :80 {
 	@authz {
-		method GET POST
+		method GET POST OPTIONS
 		path /authz_server/.well-known/oauth-authorization-server /authz_server/authorize /authz_server/authorize_backend /authz_server/par /authz_server/token /authz_server/introspection
 	}
 	@issuer {
-		method GET POST
+		method GET POST OPTIONS
 		path /credential_issuer/.well-known/openid-credential-issuer /credential_issuer/credential /credential_issuer/nonce /credential_issuer/qrcode /credential_issuer/deeplink
 	}
 	# /redeem stays internal: only the authorization server calls it.

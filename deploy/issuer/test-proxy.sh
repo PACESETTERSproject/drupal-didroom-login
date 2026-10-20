@@ -49,6 +49,12 @@ for path in /authz_server/par /authz_server/authorize_backend /authz_server/toke
   /credential_issuer/credential /credential_issuer/nonce /email-code/send /email-code/check; do
   expect 200 POST "$path"
 done
+# CORS preflights of a wallet running in a browser (the token request
+# carries a DPoP header).
+for path in /authz_server/par /authz_server/token /credential_issuer/nonce /credential_issuer/credential; do
+  expect 200 OPTIONS "$path"
+done
+expect 404 OPTIONS /authz_server/ru_to_ac
 # The offer page.
 expect 200 GET /
 expect 200 GET /logo.svg
