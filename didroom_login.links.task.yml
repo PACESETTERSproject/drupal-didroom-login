@@ -1,0 +1,5 @@
+didroom_login.user_wallet:
+  title: 'Wallet login'
+  route_name: didroom_login.user_wallet
+  base_route: entity.user.canonical
+  weight: 20

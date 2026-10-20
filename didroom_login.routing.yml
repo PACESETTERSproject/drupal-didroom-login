@@ -25,3 +25,17 @@ didroom_login.status:
     _user_is_logged_in: 'FALSE'
   options:
     no_cache: 'TRUE'
+
+didroom_login.user_wallet:
+  path: '/user/{user}/wallet-login'
+  defaults:
+    _form: '\Drupal\didroom_login\Form\WalletLoginForm'
+    _title: 'Wallet login'
+  requirements:
+    _entity_access: 'user.update'
+    _custom_access: '\Drupal\didroom_login\Form\WalletLoginForm::access'
+    user: \d+
+  options:
+    parameters:
+      user:
+        type: entity:user

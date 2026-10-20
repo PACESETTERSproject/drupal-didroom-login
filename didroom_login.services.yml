@@ -21,9 +21,11 @@ services:
     class: Drupal\didroom_login\Login\AccountResolver
     arguments:
       - '@externalauth.externalauth'
+      - '@externalauth.authmap'
       - '@entity_type.manager'
       - '@config.factory'
       - '@password_generator'
+      - '@user.data'
       - '@logger.channel.didroom_login'
   Drupal\didroom_login\Login\AccountResolver: '@didroom_login.account_resolver'
 

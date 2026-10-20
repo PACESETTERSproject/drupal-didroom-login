@@ -32,6 +32,9 @@ enum LoginFailure: string {
   // The matching account has a role that must not use wallet login.
   case AccountExcluded = 'account_excluded';
 
+  // The account's user turned wallet login off.
+  case WalletDisabled = 'wallet_disabled';
+
   /**
    * Returns the message to show the person trying to log in.
    */
@@ -44,6 +47,7 @@ enum LoginFailure: string {
       self::PendingApproval => new TranslatableMarkup('Your account has been created and is waiting for approval by an administrator. You will receive an email once it is approved.'),
       self::AccountBlocked => new TranslatableMarkup('This account is blocked or has not been activated yet.'),
       self::AccountExcluded => new TranslatableMarkup('This account cannot log in with a wallet. Log in with your password instead.'),
+      self::WalletDisabled => new TranslatableMarkup('Wallet login is turned off for this account. Log in with your password, then turn it on under the Wallet login tab of your account.'),
     };
   }
 

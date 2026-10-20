@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Drupal ${{ matrix.core }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - core: '^10.3'
+          - core: '^11'
+            lint: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Build Drupal with the module
+        run: |
+          ddev dotenv set .ddev/.env.web --drupal-core '${{ matrix.core }}'
+          ddev start
+          ddev poser
+          ddev symlink-project
+          ddev exec drush --version
+          ddev exec composer show drupal/core | grep -m1 versions
+
+      - name: PHPUnit (unit, kernel, functional, JavaScript)
+        run: ddev phpunit
+
+      - name: PHP_CodeSniffer
+        if: matrix.lint
+        run: ddev phpcs
+
+      - name: PHPStan
+        if: matrix.lint
+        run: ddev phpstan
+
+      - name: ESLint and Stylelint
+        if: matrix.lint
+        run: |
+          ddev exec 'cd web/core && yarn install'
+          ddev eslint
+          ddev stylelint

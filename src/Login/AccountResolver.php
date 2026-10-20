@@ -7,7 +7,9 @@ namespace Drupal\didroom_login\Login;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Password\PasswordGeneratorInterface;
+use Drupal\externalauth\AuthmapInterface;
 use Drupal\externalauth\ExternalAuthInterface;
+use Drupal\user\UserDataInterface;
 use Drupal\user\UserInterface;
 use Drupal\user\UserStorageInterface;
 use Psr\Log\LoggerInterface;
@@ -26,13 +28,44 @@ class AccountResolver {
    */
   public const PROVIDER = 'didroom_login';
 
+  /**
+   * The user data flag set when a user turns wallet login off.
+   */
+  public const DISABLED = 'disabled';
+
   public function __construct(
     protected ExternalAuthInterface $externalAuth,
+    protected AuthmapInterface $authmap,
     protected EntityTypeManagerInterface $entityTypeManager,
     protected ConfigFactoryInterface $configFactory,
     protected PasswordGeneratorInterface $passwordGenerator,
+    protected UserDataInterface $userData,
     protected LoggerInterface $logger,
   ) {}
+
+  /**
+   * Whether the account's user turned wallet login off.
+   */
+  public function isDisabled(UserInterface $account): bool {
+    return (bool) $this->userData->get(self::PROVIDER, (int) $account->id(), self::DISABLED);
+  }
+
+  /**
+   * Turns wallet login off or on for an account.
+   *
+   * Turning it off also removes the link, so that the account is not found by
+   * the credential any more and is not linked again by its email.
+   */
+  public function setDisabled(UserInterface $account, bool $disabled): void {
+    $uid = (int) $account->id();
+    if ($disabled) {
+      $this->authmap->delete($uid, self::PROVIDER);
+      $this->userData->set(self::PROVIDER, $uid, self::DISABLED, TRUE);
+    }
+    else {
+      $this->userData->delete(self::PROVIDER, $uid, self::DISABLED);
+    }
+  }
 
   /**
    * Returns the account that may log in with the identity, and how.
@@ -116,6 +149,9 @@ class AccountResolver {
     $excluded = (array) $this->configFactory->get('didroom_login.settings')->get('excluded_roles');
     if (array_intersect($account->getRoles(TRUE), $excluded)) {
       throw new LoginException(LoginFailure::AccountExcluded, sprintf('The account %s has a role excluded from wallet login.', $account->getAccountName()));
+    }
+    if ($this->isDisabled($account)) {
+      throw new LoginException(LoginFailure::WalletDisabled, sprintf('The account %s has wallet login turned off.', $account->getAccountName()));
     }
   }
 
