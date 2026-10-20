@@ -55,9 +55,12 @@ credential for Pacesetters, one must be built and run (e.g. an issuer that confi
 one-time code before issuing). Separate project; **blocks production use**.
 
 ### Verifier identity
-The verifier signs requests with its DID key (`client_id = decentralized_identifier:<did>#es256_public_key`).
-Needs: creating and registering the DID (DIDroom dashboard / did:dyne), backing up the private key outside
-the container, a key-rotation procedure, and documenting which DID wallets will display.
+The verifier signs requests with its DID key (`client_id = decentralized_identifier:<did>`, ES256 request objects).
+On first start it creates a keyring and registers a **sandbox** DID itself (`did:dyne:sandbox.genericissuer:<pk>`,
+through apiroom.net and did.dyne.org); fine for development (step 7). Production needs: a non-sandbox DID for
+Pacesetters (ask Dyne which spec/registry), backing up the keyring outside the container, a key-rotation procedure,
+and documenting which DID wallets will display. The verifier **prints the whole keyring to its log** on that first
+start: production must not keep that log (and an upstream issue should be opened).
 
 ## Design
 
@@ -103,10 +106,14 @@ Verifier API secret is **not config** — read from `settings.php` (`$settings['
   (email, issuer, timestamps), how long, and the pruning job; the anonymous session cookie is strictly necessary.
 
 ### Verifier deployment + hardening (`deploy/verifier/` in the repo)
-- docker-compose + Caddyfile based on the dashboard's generated bundle; minimal `custom_code/<type>.zen` that passes.
-- Caddy requires `Authorization: Bearer <token>` on `generate_authorization_request` (only Drupal can open sessions),
-  blocks `/verifier/transaction/*` from the public (Drupal polls server-side), leaves `/request/*` and `/response/*` open for wallets.
-- Cron/systemd job pruning old `public/verifier/transaction/*` and `response/*` files.
+- ✅ (step 7) compose with the upstream image pinned by digest, contracts fetched by `setup.sh` at the matching
+  commit, and `custom_code/email.zen` (named after the DCQL `vct`) that passes the result on.
+- ✅ (step 7) Caddy **allowlist**: `generate_authorization_request` and `transaction/<id>` need
+  `Authorization: Bearer <token>` (Drupal sends it on every request); `request/<hash>` and `response/<hash>` are open
+  for wallets; everything else (API docs, per-contract endpoints ncr creates, precondition files) is 404.
+  `test-proxy.sh` checks the rules in CI.
+- Cron/systemd job pruning old `public/verifier/transaction/*`, `public/verifier/request/*` and the per-session
+  routes in `verifier/response/*` (ncr loads every one of them as an endpoint, so they also slow startup).
 - **Host**: pacesetters.eu runs FreeBSD, which can't run the Linux image natively → a separate Linux host or
   a Linux VM (bhyve) is needed; decide where, and who operates it.
 - **Monitoring and updates**: uptime check on the verifier's public endpoints and on Drupal → verifier reachability
@@ -153,11 +160,15 @@ deploy/verifier/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  READ
    status report warnings. Plus **unlinking UI** and its test. Add the **GitHub Actions CI** workflow here.
    Also browser tests of the polling page (redirect, refusal + "Try again", expiry), which caught the QR code
    staying visible after a failure.
-7. **Local verifier** — `deploy/verifier` compose running the microservice in DDEV-adjacent Docker; expose via
+7. ✅ **Local verifier** — `deploy/verifier` compose running the microservice in DDEV-adjacent Docker; expose via
    `cloudflared`/`ngrok` so the phone wallet can reach `/request` + `/response`; create a dev verifier DID.
+   `scripts/dev-verifier.sh up` starts verifier + proxy + a cloudflared quick tunnel and configures the DDEV site.
+   Checked: Drupal opens real sessions; the signed request is fetched once over the tunnel; a bogus presentation
+   is recorded as failed and shown once; the DID survives restarts. Notes: new session routes take ~1–3 s to load;
+   a new tunnel name takes 1–2 min to resolve.
 8. **End-to-end** with a real Pacesetters wallet holding an email credential from the chosen issuer —
    both **cross-device** (QR on desktop) and **same-device** (phone browser + wallet on the same phone).
-9. **Hardening + docs** — Caddy rules, pruning job, monitoring, image pinning, verifier DID key backup/rotation,
+9. **Hardening + docs** — Caddy rules for production (TLS, rate limits), pruning job, monitoring, image pinning, verifier DID key backup/rotation,
    README (install via composer vcs repo, settings.php token, verifier deploy, QR-phishing residual risk,
    privacy text, AGPL note), phpcs + phpstan clean; upstream issues (nonce/aud, same-device `response_code`, `jwks_uri`);
    first tagged release.
@@ -182,6 +193,6 @@ Before any drupal.org release:
   notification email arrives; repeat same-device on the phone; with a new email (account auto-created), an existing
   account's email (linked, password scrambled), an admin's email (refused), an untrusted issuer (refused), and an
   expired session → error shown.
-- Confirm `generate_authorization_request` without the bearer token returns 401/403 via Caddy, and
-  `/verifier/transaction/*` is not reachable from outside.
+- Confirm `generate_authorization_request` without the bearer token is refused by Caddy (404), and
+  `/verifier/transaction/*` is not reachable from outside (`deploy/verifier/test-proxy.sh`, also in CI).
 - Uninstall the module on a test site → no `didroom_login` rows left in `authmap`.
