@@ -69,7 +69,11 @@ final class LoginPageTest extends WebDriverTestBase {
     $this->assertFalse($this->getSession()->getPage()->find('css', 'img.didroom-login__qr')->isVisible(), 'The QR code is hidden.');
     $this->assertFalse($this->getSession()->getPage()->findLink('Open in wallet app')->isVisible());
 
-    $this->clickLink('Try again');
+    // Followed by URL: clicking it fails in the WebDriver of Drupal 10.
+    $retry = $this->assertSession()->waitForLink('Try again');
+    $this->assertNotNull($retry);
+    $this->assertSame(Url::fromRoute('didroom_login.login')->toString(), $retry->getAttribute('href'));
+    $this->drupalGet($retry->getAttribute('href'));
     $this->assertSession()->pageTextContains('Waiting for your wallet.');
     $this->assertTrue($this->getSession()->getPage()->find('css', 'img.didroom-login__qr')->isVisible());
     $this->assertCount(2, array_filter(FakeVerifierClient::requests(), fn(array $request) => $request['method'] === 'POST'), 'A new session was opened.');
