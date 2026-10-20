@@ -1,0 +1,6 @@
+# Runs after the verifier has checked the presentation of an "email"
+# credential (named after the vct in the DCQL query). Drupal does its own
+# checks on the claims, so this only passes the result on. Printing a
+# redirect_uri here would send the wallet there once it is done.
+Given I have a 'string dictionary' named 'transaction_result'
+Then print the data

@@ -1,0 +1,42 @@
+# A DIDroom verifier for development, behind a proxy that enforces the token.
+# See README.md.
+name: didroom-verifier
+
+services:
+  verifier:
+    # Built from DIDroom_microservices commit c22341d (see setup.sh).
+    image: ghcr.io/forkbombeu/didroom_microservices@sha256:1c68569c033a41722a2289cbde0804396c9bf74d29ef3bdabf65a9b24d4acb73
+    entrypoint:
+      - sh
+      - -c
+      - ./scripts/verifier.sh && exec ./ncr -p 3000 -z verifier --public-directory public/verifier --basepath /verifier
+    environment:
+      # Only names the saved keyring, so that the DID survives restarts.
+      MS_URL: http://didroom-verifier
+      MS_NAME: verifier
+    volumes:
+      - ./run/verifier:/app/verifier
+      - ./run/public/verifier:/app/public/verifier
+      - ./run/keys:/root/.config/didroom
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2.10.2-alpine
+    environment:
+      VERIFIER_TOKEN: ${VERIFIER_TOKEN:?Set VERIFIER_TOKEN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - 127.0.0.1:${VERIFIER_PORT:-8090}:80
+    depends_on:
+      - verifier
+    restart: unless-stopped
+
+  # A public HTTPS URL for phones, with a random trycloudflare.com name.
+  tunnel:
+    profiles: [tunnel]
+    image: cloudflare/cloudflared:2026.1.1
+    command: tunnel --no-autoupdate --url http://proxy:80
+    depends_on:
+      - proxy
+    restart: unless-stopped

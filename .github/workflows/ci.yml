@@ -56,3 +56,18 @@ jobs:
           ddev exec 'cd web/core && yarn install'
           ddev eslint
           ddev stylelint
+
+  verifier:
+    name: Verifier proxy and config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the scripts and compose file
+        run: |
+          bash -n deploy/verifier/setup.sh deploy/verifier/test-proxy.sh scripts/dev-verifier.sh
+          VERIFIER_TOKEN=ci docker compose -f deploy/verifier/compose.yaml --profile tunnel config -q
+
+      - name: Test the proxy rules
+        run: deploy/verifier/test-proxy.sh

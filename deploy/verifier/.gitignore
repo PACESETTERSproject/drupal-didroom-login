@@ -1,0 +1,3 @@
+# Upstream contracts, keys and results: created by setup.sh and the verifier.
+/run/
+/.env

@@ -1,0 +1,25 @@
+{
+	admin off
+	auto_https off
+}
+
+# Only the verifier endpoints of the OpenID4VP flow are reachable. Opening
+# sessions and reading results need the token that Drupal sends; wallets
+# fetch requests and post responses freely, as the protocol requires.
+:80 {
+	@drupal {
+		header Authorization "Bearer {$VERIFIER_TOKEN}"
+		path_regexp ^/verifier/(generate_authorization_request|transaction/[0-9a-f]+)$
+	}
+	@wallet path_regexp ^/verifier/(request|response)/[0-9a-f]+$
+
+	handle @drupal {
+		reverse_proxy verifier:3000
+	}
+	handle @wallet {
+		reverse_proxy verifier:3000
+	}
+	handle {
+		respond 404
+	}
+}
