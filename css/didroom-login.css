@@ -22,6 +22,7 @@
   font-size: 0.875em;
 }
 
+.didroom-login--finished .didroom-login__qr,
 .didroom-login--finished .didroom-login__same-device,
 .didroom-login--finished .didroom-login__steps {
   display: none;

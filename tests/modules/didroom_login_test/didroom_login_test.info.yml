@@ -1,0 +1,7 @@
+name: 'DIDroom Login test'
+type: module
+description: 'Replaces the DIDroom verifier with a fake driven by state, for tests.'
+package: Testing
+hidden: true
+dependencies:
+  - didroom_login:didroom_login

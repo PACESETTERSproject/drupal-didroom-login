@@ -217,6 +217,24 @@ class VerifierClient {
    *   When the verifier cannot be reached.
    */
   protected function send(string $method, string $url, array $options = []): ResponseInterface {
+    try {
+      return $this->httpClient->request($method, $url, $this->requestOptions($options));
+    }
+    catch (GuzzleException $e) {
+      throw $this->error('The verifier could not be reached: @message', ['@message' => $e->getMessage()], $e);
+    }
+  }
+
+  /**
+   * Adds the timeouts, headers and token to the options of a request.
+   *
+   * @param array<string, mixed> $options
+   *   Extra Guzzle request options.
+   *
+   * @return array<string, mixed>
+   *   The complete Guzzle request options.
+   */
+  protected function requestOptions(array $options): array {
     $options += [
       RequestOptions::HTTP_ERRORS => FALSE,
       RequestOptions::TIMEOUT => self::TIMEOUT,
@@ -229,12 +247,7 @@ class VerifierClient {
     if ($token !== '') {
       $options[RequestOptions::HEADERS]['Authorization'] = 'Bearer ' . $token;
     }
-    try {
-      return $this->httpClient->request($method, $url, $options);
-    }
-    catch (GuzzleException $e) {
-      throw $this->error('The verifier could not be reached: @message', ['@message' => $e->getMessage()], $e);
-    }
+    return $options;
   }
 
   /**

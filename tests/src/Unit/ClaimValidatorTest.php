@@ -78,6 +78,8 @@ final class ClaimValidatorTest extends UnitTestCase {
    *   Claims as returned by the verifier.
    * @param \Drupal\didroom_login\Login\LoginFailure $reason
    *   The expected failure.
+   *
+   * @dataProvider providerRejected
    */
   #[DataProvider('providerRejected')]
   public function testRejected(array $claims, LoginFailure $reason): void {

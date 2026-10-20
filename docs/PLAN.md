@@ -95,8 +95,10 @@ Verifier API secret is **not config** — read from `settings.php` (`$settings['
 - **`hook_requirements('runtime')`**: status report errors/warnings for a missing verifier URL, token or
   trusted issuers, an unreachable verifier, and `verify_mail` off while linking is on.
 - **`hook_uninstall()`**: `externalauth.authmap->deleteProvider('didroom_login')`.
-- **Unlinking**: show the wallet link on the user edit form (own account and admins) with a "Remove wallet
-  login" action; admins can also see linked accounts in the People list via a views field or a simple report.
+- ✅ **Unlinking** (step 6): a "Wallet login" tab on the account (own account and user admins) shows the link and
+  turns wallet login off or on. Turning it off removes the authmap row **and** sets a user data flag, since otherwise
+  the next wallet login would link the account again by email (`LoginFailure::WalletDisabled`). Admins can list linked
+  accounts by adding externalauth's "External Authentication Map" fields to the People view.
 - **Privacy**: README section and suggested privacy-notice text on what Drupal and the verifier store
   (email, issuer, timestamps), how long, and the pruning job; the anonymous session cookie is strictly necessary.
 
@@ -116,7 +118,8 @@ Verifier API secret is **not config** — read from `settings.php` (`$settings['
   checks, the `jwks_uri` fallback bug, and a same-device `response_code`.
 
 ### Distribution and project hygiene
-- **CI**: GitHub Actions running phpunit (Unit/Kernel/Functional), phpcs and phpstan against Drupal 10.3 and 11.
+- ✅ **CI** (step 6): GitHub Actions running DDEV (with Selenium Chrome): phpunit (Unit/Kernel/Functional/
+  FunctionalJavascript) against Drupal 10 and 11, plus phpcs, phpstan, eslint and stylelint on 11.
 - **Releases**: semver git tags; install on pacesetters.eu via a composer `vcs` repository entry
   (`"repositories": [{"type":"vcs","url":"https://github.com/PACESETTERSproject/drupal-didroom-login"}]`)
   until/unless it's published on Packagist or drupal.org.
@@ -131,7 +134,7 @@ src/Controller/LoginController.php  src/Form/SettingsForm.php
 src/Verifier/{VerifierClient,VerificationRequest,VerificationResult,VerificationStatus,VerifierException}.php
 src/Login/{ClaimValidator,AccountResolver,VerifiedIdentity,LoginException,LoginFailure}.php
 templates/didroom-login.html.twig  js/didroom-login.js  css/didroom-login.css
-tests/src/{Unit,Kernel,Functional}/…  tests/modules/didroom_login_test/ (fake VerifierClient)
+tests/src/{Unit,Kernel,Functional,FunctionalJavascript,Traits}/…  tests/modules/didroom_login_test/ (fake VerifierClient)
 deploy/verifier/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  README.md  LICENSE
 ```
 
@@ -145,9 +148,11 @@ deploy/verifier/  .ddev/  .github/workflows/  phpcs.xml.dist  phpstan.neon  READ
    **login notification email**; **pre-hijack rules** (`verify_mail` check, password scramble on link);
    new settings (`notify_login`, `link_unverified`, `reset_password_on_link`) and lower default `session_ttl`;
    `hook_requirements`; `hook_uninstall`.
-6. **Functional test** with `didroom_login_test` fake client: start → pending → done → user logged in; expired;
+6. ✅ **Functional test** with `didroom_login_test` fake client: start → pending → done → user logged in; expired;
    untrusted issuer; notification sent; linking refused when `verify_mail` is off; password scrambled on link;
    status report warnings. Plus **unlinking UI** and its test. Add the **GitHub Actions CI** workflow here.
+   Also browser tests of the polling page (redirect, refusal + "Try again", expiry), which caught the QR code
+   staying visible after a failure.
 7. **Local verifier** — `deploy/verifier` compose running the microservice in DDEV-adjacent Docker; expose via
    `cloudflared`/`ngrok` so the phone wallet can reach `/request` + `/response`; create a dev verifier DID.
 8. **End-to-end** with a real Pacesetters wallet holding an email credential from the chosen issuer —
@@ -170,7 +175,7 @@ Before any drupal.org release:
 - License: GPL-3.0-or-later (current) vs GPL-2.0-or-later (required by drupal.org).
 
 ## Verification
-- CI green: `ddev phpunit` (Unit, Kernel, Functional), `ddev phpcs`, `ddev phpstan`.
+- CI green: `ddev phpunit` (Unit, Kernel, Functional, FunctionalJavascript), `ddev phpcs`, `ddev phpstan`.
 - Manual: `ddev launch /user/login` → wallet button → QR page; with the fake client toggled, polling logs the user in;
   status report shows a warning while the module is unconfigured and the login link is hidden.
 - E2E: scan QR with Pacesetters wallet on a phone → present email credential → desktop browser auto-logs in and a

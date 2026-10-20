@@ -47,6 +47,7 @@ final class AccountResolverTest extends KernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installSchema('externalauth', ['authmap']);
+    $this->installSchema('user', ['users_data']);
     $this->installConfig(['didroom_login', 'system', 'user']);
     Role::create(['id' => 'administrator', 'label' => 'Administrator'])->save();
     Role::create(['id' => 'member', 'label' => 'Member'])->save();
@@ -235,6 +236,25 @@ final class AccountResolverTest extends KernelTestBase {
     $this->resolve('heidi@example.org');
     $member->addRole('administrator')->save();
     $this->assertRefused('heidi@example.org', LoginFailure::AccountExcluded);
+  }
+
+  /**
+   * Turning wallet login off unlinks the account and stops relinking.
+   */
+  public function testDisabled(): void {
+    $account = $this->createUser([], 'liam', FALSE, ['mail' => 'liam@example.org']);
+    $this->resolve('liam@example.org');
+    $this->assertFalse($this->resolver->isDisabled($account));
+
+    $this->resolver->setDisabled($account, TRUE);
+    $this->assertTrue($this->resolver->isDisabled($account));
+    $this->assertFalse($this->linkedUid('liam@example.org'));
+    $this->assertRefused('liam@example.org', LoginFailure::WalletDisabled);
+    $this->assertFalse($this->linkedUid('liam@example.org'), 'Not linked again by email.');
+
+    $this->resolver->setDisabled($account, FALSE);
+    $this->assertFalse($this->resolver->isDisabled($account));
+    $this->assertSame(AccountOutcome::LinkedPasswordReset, $this->resolution('liam@example.org')->outcome);
   }
 
 }
