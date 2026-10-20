@@ -177,7 +177,11 @@ deploy/verifier/  deploy/issuer/  .ddev/  .github/workflows/  phpcs.xml.dist  ph
    mobile_zencode contracts in ncr as a simulated wallet: issuance with a code from Mailpit (wrong code, bogus and
    reused tickets refused), then presentation to the dev verifier → Drupal logs in (account created). Findings:
    ncr exposes `ru_to_ac`, which issues codes for any claims (must stay behind the proxy); the wallet refuses offers
-   naming the authorization server when only one is listed; ncr doesn't decode `+` in form posts.
+   naming the authorization server when only one is listed; ncr doesn't decode `+` in form posts; zencode serves an
+   empty grant object as an array (the offer has no grants); browser wallets send CORS preflights (`OPTIONS`, the
+   token request carries DPoP), which the proxy must let through.
+   Also checked with the **real Pacesetters wallet** (web build from its repo, `pnpm dev`, links pasted in Scan):
+   credential received with an emailed code, then wallet login to the DDEV site done.
 8. **End-to-end** with a real Pacesetters wallet holding an email credential from the chosen issuer —
    both **cross-device** (QR on desktop) and **same-device** (phone browser + wallet on the same phone).
 9. **Hardening + docs** — Caddy rules for production (TLS, rate limits) for verifier and issuer, pruning job
