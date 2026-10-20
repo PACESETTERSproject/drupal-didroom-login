@@ -6,6 +6,7 @@ namespace Drupal\didroom_login\Login;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Password\PasswordGeneratorInterface;
 use Drupal\externalauth\ExternalAuthInterface;
 use Drupal\user\UserInterface;
 use Drupal\user\UserStorageInterface;
@@ -29,22 +30,23 @@ class AccountResolver {
     protected ExternalAuthInterface $externalAuth,
     protected EntityTypeManagerInterface $entityTypeManager,
     protected ConfigFactoryInterface $configFactory,
+    protected PasswordGeneratorInterface $passwordGenerator,
     protected LoggerInterface $logger,
   ) {}
 
   /**
-   * Returns the account that may log in with the identity.
+   * Returns the account that may log in with the identity, and how.
    *
    * @throws \Drupal\didroom_login\Login\LoginException
    *   When no account may log in.
    * @throws \Drupal\externalauth\Exception\ExternalAuthRegisterException
    *   When registering a new account fails.
    */
-  public function resolve(VerifiedIdentity $identity): UserInterface {
+  public function resolve(VerifiedIdentity $identity): AccountResolution {
     $account = $this->externalAuth->load($identity->email, self::PROVIDER);
     if ($account instanceof UserInterface) {
       $this->assertMayLogIn($account);
-      return $account;
+      return new AccountResolution($account, AccountOutcome::Known);
     }
 
     $matches = $this->userStorage()->loadByProperties(['mail' => $identity->email]);
@@ -55,12 +57,18 @@ class AccountResolver {
     if ($account instanceof UserInterface) {
       // Check before linking, so excluded accounts never get a wallet link.
       $this->assertMayLogIn($account);
+      $this->assertMayLink($account);
       $this->externalAuth->linkExistingAccount($identity->email, self::PROVIDER, $account);
       $this->logger->notice('Linked the wallet credential to the existing account %name.', ['%name' => $account->getAccountName()]);
-      return $account;
+      if ($this->configFactory->get('didroom_login.settings')->get('reset_password_on_link')) {
+        // Saving a new password also ends the account's other sessions.
+        $account->setPassword($this->passwordGenerator->generate(32))->save();
+        return new AccountResolution($account, AccountOutcome::LinkedPasswordReset);
+      }
+      return new AccountResolution($account, AccountOutcome::Linked);
     }
 
-    return $this->register($identity);
+    return new AccountResolution($this->register($identity), AccountOutcome::Created);
   }
 
   /**
@@ -89,6 +97,8 @@ class AccountResolver {
       'roles' => $roles,
     ]);
     if (!$approved) {
+      // Tell the user and the site administrators, as core registration does.
+      _user_mail_notify('register_pending_approval', $account);
       throw new LoginException(LoginFailure::PendingApproval, sprintf('Created the account %s, which waits for administrator approval.', $account->getAccountName()));
     }
     return $account;
@@ -106,6 +116,21 @@ class AccountResolver {
     $excluded = (array) $this->configFactory->get('didroom_login.settings')->get('excluded_roles');
     if (array_intersect($account->getRoles(TRUE), $excluded)) {
       throw new LoginException(LoginFailure::AccountExcluded, sprintf('The account %s has a role excluded from wallet login.', $account->getAccountName()));
+    }
+  }
+
+  /**
+   * Throws unless an existing account may be linked by its email.
+   *
+   * Without email verification on registration, anyone may have registered
+   * the address first, and would share the account once it is linked.
+   *
+   * @throws \Drupal\didroom_login\Login\LoginException
+   */
+  protected function assertMayLink(UserInterface $account): void {
+    if (!$this->configFactory->get('user.settings')->get('verify_mail')
+      && !$this->configFactory->get('didroom_login.settings')->get('link_unverified')) {
+      throw new LoginException(LoginFailure::LinkNotAllowed, sprintf('Not linking the account %s: registration does not verify email addresses.', $account->getAccountName()));
     }
   }
 

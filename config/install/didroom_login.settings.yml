@@ -20,4 +20,7 @@ auto_create: true
 default_roles: []
 excluded_roles:
   - administrator
-session_ttl: 300
+session_ttl: 120
+notify_login: true
+link_unverified: false
+reset_password_on_link: true

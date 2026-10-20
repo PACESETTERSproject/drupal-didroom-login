@@ -1,0 +1,10 @@
+login:
+  js:
+    js/didroom-login.js: {}
+  css:
+    component:
+      css/didroom-login.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/once

@@ -1,0 +1,42 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the DIDroom Login module.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+use Drupal\didroom_login\Login\AccountResolver;
+
+/**
+ * Implements hook_requirements().
+ *
+ * For Drupal before 11.3; later versions use hook_runtime_requirements() in
+ * \Drupal\didroom_login\Hook\DidroomLoginHooks.
+ */
+#[LegacyRequirementsHook]
+function didroom_login_requirements(string $phase): array {
+  return $phase === 'runtime' ? \Drupal::service('didroom_login.status_report')->requirements() : [];
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function didroom_login_uninstall(): void {
+  \Drupal::service('externalauth.authmap')->deleteProvider(AccountResolver::PROVIDER);
+}
+
+/**
+ * Add the login notification and account linking settings.
+ */
+function didroom_login_update_10001(): void {
+  $config = \Drupal::configFactory()->getEditable('didroom_login.settings');
+  foreach (['notify_login' => TRUE, 'link_unverified' => FALSE, 'reset_password_on_link' => TRUE] as $key => $default) {
+    if ($config->get($key) === NULL) {
+      $config->set($key, $default);
+    }
+  }
+  $config->save();
+}

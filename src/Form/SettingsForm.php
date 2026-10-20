@@ -10,6 +10,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\ConfigTarget;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use Drupal\user\RoleInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -82,7 +83,7 @@ final class SettingsForm extends ConfigFormBase {
       '#field_suffix' => $this->t('seconds'),
       '#min' => 60,
       '#max' => 1800,
-      '#description' => $this->t('How long the QR code stays valid. The DIDroom verifier itself expires requests after 300 seconds.'),
+      '#description' => $this->t('How long the QR code stays valid. Keep it short: a QR code shown on another site could be scanned by someone else while it is valid. The DIDroom verifier itself expires requests after 300 seconds.'),
       '#config_target' => new ConfigTarget(
         'didroom_login.settings',
         'session_ttl',
@@ -137,7 +138,9 @@ final class SettingsForm extends ConfigFormBase {
     $form['accounts']['auto_create'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Create an account when no user has the verified email'),
-      '#description' => $this->t('Existing users with the same email are always linked and logged in.'),
+      '#description' => $this->t('The site-wide <a href=":url">registration setting</a> still applies: nobody is created when only administrators may register, and new accounts wait for approval when it is required.', [
+        ':url' => Url::fromRoute('entity.user.admin_form')->toString(),
+      ]),
       '#config_target' => 'didroom_login.settings:auto_create',
     ];
     $form['accounts']['default_roles'] = [
@@ -163,6 +166,25 @@ final class SettingsForm extends ConfigFormBase {
         'excluded_roles',
         toConfig: [self::class, 'checkedValues'],
       ),
+    ];
+
+    $form['accounts']['link_unverified'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Link existing accounts even though registration does not verify email addresses'),
+      '#description' => $this->t('An existing account with the verified email is linked to the wallet and logged in. When the site does not require email verification on registration, anyone could have registered that address first and would then share the account. Leave this off unless every existing account has a verified email.'),
+      '#config_target' => 'didroom_login.settings:link_unverified',
+    ];
+    $form['accounts']['reset_password_on_link'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Replace the password when an existing account is first linked'),
+      '#description' => $this->t('Signs out any other sessions and stops a password set by someone else from working. The user can set a new one with "Reset your password".'),
+      '#config_target' => 'didroom_login.settings:reset_password_on_link',
+    ];
+    $form['accounts']['notify_login'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Email users each time they log in with a wallet'),
+      '#description' => $this->t('Lets users notice a login they did not make, e.g. after scanning a QR code shown by another site.'),
+      '#config_target' => 'didroom_login.settings:notify_login',
     ];
 
     return parent::buildForm($form, $form_state);
