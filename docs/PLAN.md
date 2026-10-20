@@ -184,10 +184,18 @@ deploy/verifier/  deploy/issuer/  .ddev/  .github/workflows/  phpcs.xml.dist  ph
    credential received with an emailed code, then wallet login to the DDEV site done.
 8. **End-to-end** with a real Pacesetters wallet holding an email credential from the chosen issuer —
    both **cross-device** (QR on desktop) and **same-device** (phone browser + wallet on the same phone).
+   ◐ **Cross-device done with the native Android app** (debug APK from the wallet repo, `pnpm apk:waydroid`, in
+   Waydroid): offer → authorize page in the Android browser → emailed code → back to the app through
+   `pacesetters-wallet://` → credential; then wallet login to the DDEV site, twice (an existing account linked by
+   email). Waydroid has no camera, so links went in with `adb shell am start -a android.intent.action.VIEW -d …`.
+   Found a **wallet bug**: without biometry, "Open Wallet" on the unlock page dropped the pending deep link, so
+   offers and verification requests never opened on such phones; fixed in PACESETTERSproject/wallet#4.
+   Still to do: same-device (needs the site on a public URL) and a physical phone, with and without biometry.
 9. **Hardening + docs** — Caddy rules for production (TLS, rate limits) for verifier and issuer, pruning job
    (also the issuer's `credential_issuer/nonces/`), a "get an email credential" link on the login page, monitoring, image pinning, verifier DID key backup/rotation,
    README (install via composer vcs repo, settings.php token, verifier deploy, QR-phishing residual risk,
-   privacy text, AGPL note), phpcs + phpstan clean; upstream issues (nonce/aud, same-device `response_code`, `jwks_uri`);
+   privacy text, AGPL note), phpcs + phpstan clean; upstream issues (nonce/aud, same-device `response_code`, `jwks_uri`;
+   mobile_zencode refusing offers that name the only authorization server);
    first tagged release.
 
 ## Open items
