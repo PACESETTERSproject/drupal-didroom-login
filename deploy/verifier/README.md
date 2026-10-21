@@ -44,6 +44,19 @@ changes on every start; `up` updates the site each time.
 Phones reach the verifier only through the tunnel, so the QR code works from
 any network. The Drupal site itself stays local.
 
+To log in on the phone itself, with the browser and the wallet on the same
+phone, the phone's browser must open the site too:
+
+```sh
+scripts/dev-site.sh up     # put the DDEV site behind a tunnel, and print its URL
+scripts/dev-site.sh url    # print the public site URL
+scripts/dev-site.sh down   # stop
+```
+
+Open the printed wallet login URL in the phone's browser and tap "Open in
+wallet app". After the wallet answers, switch back to the browser: the page
+logs in. The tunnel URL changes on every start, but nothing stores it.
+
 ## Setup without the script
 
 ```sh

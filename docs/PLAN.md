@@ -190,12 +190,21 @@ deploy/verifier/  deploy/issuer/  .ddev/  .github/workflows/  phpcs.xml.dist  ph
    email). Waydroid has no camera, so links went in with `adb shell am start -a android.intent.action.VIEW -d …`.
    Found a **wallet bug**: without biometry, "Open Wallet" on the unlock page dropped the pending deep link, so
    offers and verification requests never opened on such phones; fixed in PACESETTERSproject/wallet#4.
-   Still to do: same-device (needs the site on a public URL) and a physical phone, with and without biometry.
+   ◐ **Same-device done in Waydroid**: `scripts/dev-site.sh up` puts the DDEV site behind a tunnel too (it must keep
+   the public host name, or Drupal sets the session cookie for the DDEV name and the phone's browser drops it).
+   Issuance from the offer page's "Open in wallet app" link, then wallet login from the site's own login page in the
+   Android browser: "Open in wallet app" → wallet → verified → back to the browser, which logged in within a second
+   (it kept polling in the background) and sent the notification email. The wallet stays on its result screen, so
+   the user switches back by hand. Found a second **wallet bug**: a link that cold-starts the app left the loading
+   overlay up for good, covering "Open Wallet" (the navigation object reached `d-loading` as a property before
+   the component was registered); fixed in PACESETTERSproject/wallet#5. Also checked with the app closed.
+   Still to do: a physical phone, with and without biometry, scanning the QR code with the camera.
 9. **Hardening + docs** — Caddy rules for production (TLS, rate limits) for verifier and issuer, pruning job
    (also the issuer's `credential_issuer/nonces/`), a "get an email credential" link on the login page, monitoring, image pinning, verifier DID key backup/rotation,
    README (install via composer vcs repo, settings.php token, verifier deploy, QR-phishing residual risk,
    privacy text, AGPL note), phpcs + phpstan clean; upstream issues (nonce/aud, same-device `response_code`, `jwks_uri`;
-   mobile_zencode refusing offers that name the only authorization server);
+   mobile_zencode refusing offers that name the only authorization server; the wallet not returning to the browser
+   after a same-device presentation);
    first tagged release.
 
 ## Open items
