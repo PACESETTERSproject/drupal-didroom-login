@@ -66,7 +66,7 @@ jobs:
 
       - name: Check the scripts and compose file
         run: |
-          bash -n deploy/verifier/setup.sh deploy/verifier/test-proxy.sh scripts/dev-verifier.sh
+          for f in deploy/verifier/setup.sh deploy/verifier/test-proxy.sh scripts/dev-verifier.sh scripts/dev-site.sh; do bash -n "$f"; done
           VERIFIER_TOKEN=ci docker compose -f deploy/verifier/compose.yaml --profile tunnel config -q
 
       - name: Test the proxy rules
@@ -81,7 +81,7 @@ jobs:
 
       - name: Check the scripts and compose file
         run: |
-          bash -n deploy/issuer/setup.sh deploy/issuer/configure.sh deploy/issuer/test-proxy.sh scripts/dev-issuer.sh
+          for f in deploy/issuer/setup.sh deploy/issuer/configure.sh deploy/issuer/test-proxy.sh scripts/dev-issuer.sh; do bash -n "$f"; done
           python3 -m py_compile deploy/issuer/test-issuance.py
           ISSUER_NAME=ci MAIL_FROM=ci@example.org docker compose -f deploy/issuer/compose.yaml --profile tunnel --profile dev config -q
 
